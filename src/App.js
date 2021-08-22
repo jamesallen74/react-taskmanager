@@ -1,68 +1,122 @@
-import { useState } from "react";
-import Header from "./components/Header";
-import Tasks from "./components/Tasks";
-import AddTask from "./components/AddTask";
+import { useState, useEffect } from 'react'
+import {BrowserRouter as Router, Route} from 'react-router-dom'
+import Header from './components/Header'
+import Footer from './components/Footer'
+import About from './components/About'
+import Tasks from './components/Tasks'
+import AddTask from './components/AddTask'
 
 function App() {
   const [showAddTask, setShowAddTask] = useState(false)
 
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      text: "Task 1",
-      day: "Feb 5th at 230pm",
-      reminder: true,
-    },
-    {
-      id: 2,
-      text: "Task 2",
-      day: "Feb 6th at 230pm",
-      reminder: true,
-    },
-    {
-      id: 3,
-      text: "Task 3",
-      day: "Feb 7th at 230pm",
-      reminder: true,
-    },
-  ]);
+  const [tasks, setTasks] = useState([]);
+
+  // Load tasks on page load
+  useEffect(() => {
+    
+    const getTasks = async () => {
+      const tasksFromServer = await fetchTasks()
+      setTasks(tasksFromServer)
+    }
+
+    getTasks()
+
+  }, [])
+
+
+
+  //Fetch Tasks
+  const fetchTasks = async () => {
+    const res = await fetch('http://localhost:5555/tasks')
+    const data = await res.json()
+    
+    return data
+  } 
+
+
+  //Fetch Task
+  const fetchTask = async (id) => {
+    const res = await fetch(`http://localhost:5555/tasks/${id}`)
+    const data = await res.json()
+    
+    return data
+  } 
+  
 
   // Add Task
-  const addTask = (task) => {
-    //console.log(task)
-    const id = Math.floor(Math.random() * 10000 + 1)
-    const newTask = {id, ...task}
-    setTasks([...tasks, newTask])
+  const addTask = async (task) => {
+    const res = await fetch('http://localhost:5555/tasks',
+    {
+      method:"POST",
+      headers: {
+        'Content-Type':'application/json',
+      },
+      body: JSON.stringify(task)
+    })
+
+    const data = await res.json()
+
+    setTasks([...tasks, data])
   }
 
   // Delete Task
-  const deleteTask = (id) => {
-    // console.log('delete', id)
-    setTasks(tasks.filter((task) => task.id !== id));
-  };
+  const deleteTask = async (id) => {
+    await fetch(`http://localhost:5555/tasks/${id}`,
+                { method: 'Delete' })
+    
+    setTasks(tasks.filter((task) => task.id !== id))
+  }
 
   // Toggle reminder
-  const toggleReminder = (id) => {
+  const toggleReminder = async (id) => {
+    const taskToToggle = await fetchTask(id)
+    const updatedTask = {...taskToToggle, reminder: !taskToToggle.reminder}
+    
+    const res = await fetch(`http://localhost:5555/tasks/${id}`, {
+      method:'PUT',
+      headers: {
+        'Content-Type':'application/json'
+      },
+      body: JSON.stringify(updatedTask)
+    })
+
+    const data = await res.json()
+
     setTasks(tasks.map((task) => 
-      task.id === id? {...task, reminder:!task.reminder} : task))
-  };
+      task.id === id? {...task, reminder:
+        data.reminder} : task))
+  }
 
   return (
-    <div className="container">
-      <Header 
-        onAdd={ () => setShowAddTask(!showAddTask)} 
-        showAdd = {showAddTask}  
-      />
-      
-      {showAddTask && <AddTask onAdd={addTask} />}
+    <Router>
+      <div className="container">
+        <Header 
+          onAdd={ () => setShowAddTask(!showAddTask)} 
+          showAdd = {showAddTask}  
+        />
 
-      {tasks.length > 0 ? (
-          <Tasks tasks={tasks} onDelete={deleteTask} onToggle={toggleReminder} /> ) : 
-          ("No tasks to show")
-      }
+        <Route 
+        path='/' 
+        exact 
+        render= {(props) => (
+            <>
+              {showAddTask && <AddTask onAdd={addTask} />}
 
-    </div>
-  );
+              {tasks.length > 0 ? (
+                  <Tasks tasks={tasks} onDelete={deleteTask} onToggle={toggleReminder} /> ) : 
+                  ("No tasks to show")
+              }
+            </> 
+        )} />
+
+
+        <Route path="/about" component={About}/>
+
+        <Footer />
+
+      </div>
+    </Router>
+  )
 }
 
 export default App;

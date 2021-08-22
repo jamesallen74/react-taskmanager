@@ -23,7 +23,7 @@ const AddTask = ({onAdd}) => {
         <form className='add-form' onSubmit={onSubmit}>
             <div className='form-control'>
                 <label>Task</label>
-                <input type='text' placeholder='Add Task' autofocus
+                <input type='text' placeholder='Add Task' 
                 value={text} onChange={(e) => setText(e.target.value)} />
             </div>
 
